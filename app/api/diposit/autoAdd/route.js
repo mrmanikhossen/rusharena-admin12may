@@ -26,14 +26,12 @@ export async function POST(req) {
     const amountMatch = key.match(/received Tk\s*([\d.]+)/i);
     const fromMatch = key.match(/from\s*(01[3-9]\d{8})/i);
     const trxIdMatch = key.match(/TrxID\s*([A-Z0-9]+)/i);
-    const serviceMatch = key.match(/From\s*:\s*([A-Za-z]+)/i);
 
     const amount = amountMatch ? parseFloat(amountMatch[1]) : null;
     const senderNumber = fromMatch ? fromMatch[1] : null;
     const trxId = trxIdMatch ? trxIdMatch[1] : null;
-    const service = serviceMatch ? serviceMatch[1] : null;
 
-    if (!amount || !senderNumber || !trxId || !service) {
+    if (!amount || !senderNumber || !trxId) {
       return response(
         false,
         400,
@@ -46,6 +44,7 @@ export async function POST(req) {
 
     // --- Find matching deposit request
     const deposit = await dipositScema.findOne({ trxId: trxId });
+    const service = deposit ? deposit.method : null;
 
     if (!deposit) {
       // Log as pending SMS if no deposit request found
