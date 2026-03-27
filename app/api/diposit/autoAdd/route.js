@@ -10,6 +10,7 @@ export async function POST(req) {
     await connectDB();
 
     // --- Parse body safely (supports both JSON & form-data)
+
     let body;
     try {
       body = await req.json();
@@ -20,36 +21,44 @@ export async function POST(req) {
     }
 
     const { key, time } = body;
-    if (!key) return response(false, 400, "Missing 'key' in request body");
+
+    if (!key || typeof key !== "string") {
+      return response(false, 400, "Invalid or missing 'key'");
+    }
 
     // --- Extract values via regex
-    const amountMatch = key.match(/received Tk\s*([\d.]+)/i);
+    const amountMatchB = key.match(/received Tk\s*([\d.]+)/i);
     const fromMatch = key.match(/from\s*(01[3-9]\d{8})/i);
-    const senderMatch = key.match(/Sender\s*(01[3-9]\d{8})/i);
     const trxIdMatch = key.match(/TrxID\s*([A-Z0-9]+)/i);
-    const txnIdMatch = key.match(/TxnID\s*([A-Z0-9]+)/i);
 
-    const amount = amountMatch ? parseFloat(amountMatch[1]) : null;
-    const senderNumber = senderMatch
-      ? senderMatch[1]
-      : null || fromMatch
-        ? fromMatch[1]
-        : null;
+    const amountMatchN = key.match(/Amount: Tk\s*([\d.]+)/i);
+    const senderMatch = key.match(/Sender:\s*(01[3-9]\d{8})/i);
+    const txnIdMatch = key.match(/TxnID:\s*([A-Z0-9]+)/i);
 
-    const trxId = trxIdMatch
-      ? trxIdMatch[1]
-      : null || txnIdMatch
-        ? txnIdMatch[1]
-        : null;
+    // ✅ FIXED LOGIC
+    let amount = null;
+    if (amountMatchB) amount = parseFloat(amountMatchB[1]);
+    else if (amountMatchN) amount = parseFloat(amountMatchN[1]);
+
+    let senderNumber = null;
+    if (senderMatch) senderNumber = senderMatch[1];
+    else if (fromMatch) senderNumber = fromMatch[1];
+
+    let trxId = null;
+    if (trxIdMatch) trxId = trxIdMatch[1];
+    else if (txnIdMatch) trxId = txnIdMatch[1];
+
     const service = senderMatch ? "Nagad" : fromMatch ? "Bkash" : "Unknown";
 
-    if (!amount || !trxId) {
-      return response(
-        false,
-        400,
-        "Failed to extract required transaction details",
-      );
+    // --- Validate extracted data
+    if (!amount || isNaN(amount) || amount <= 0) {
+      return response(false, 400, "Invalid amount");
     }
+
+    if (!trxId || trxId.length < 5) {
+      return response(false, 400, "Invalid transaction ID");
+    }
+
     const existingTx = await smsLog.findOne({ transactionId: trxId });
     if (existingTx)
       return response(false, 409, "Duplicate transaction detected");

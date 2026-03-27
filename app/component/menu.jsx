@@ -29,8 +29,8 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 
-// ✅ Route
-const edit_photos = "/edit-photos";
+// clowdinary link ----------------------------
+import { clowdinaryLink } from "@/config";
 
 // ✅ Menu Data
 const menuData = [
@@ -41,7 +41,7 @@ const menuData = [
   { label: "Edit Numbers", link: edit_number, icon: Edit },
   {
     label: "Edit Photos",
-    link: edit_photos,
+    link: clowdinaryLink,
     icon: ImageIcon,
     confirm: true,
   },

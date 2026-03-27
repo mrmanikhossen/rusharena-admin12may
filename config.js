@@ -40,6 +40,10 @@ export const MatchType10Img =
   "https://res.cloudinary.com/dnvlk6ubg/image/upload/free-match_sr5xfb.jpg" ||
   "/images/matches/free-match.jpg";
 
+// clowdinary link ----------------------------
+export const clowdinaryLink =
+  "https://console.cloudinary.com/app/c-303df4e9e7cfce4396938d959635a8/assets/media_library/folders/";
+
 // pages link
 export const withdrawPage = "/wallet/withdraw";
 export const depositPage = "/wallet/diposit";
