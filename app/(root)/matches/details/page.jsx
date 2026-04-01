@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import { useRouter, useSearchParams } from "next/navigation";
 import ButtonLoading from "@/app/component/buttonLoading";
@@ -14,30 +14,73 @@ export default function MatchDetails() {
   const [match, setMatch] = useState(null);
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showModal, setShowModal] = useState(false); // ✅ modal state
+  const [fetching, setFetching] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [inputError, setInputError] = useState(false);
+
+  // ✅ total winning calculation
+  const totalWinning = useMemo(() => {
+    return players.reduce((sum, p) => sum + (Number(p.wining) || 0), 0);
+  }, [players]);
 
   useEffect(() => {
+    if (!matchId) return;
+
     const fetchData = async () => {
       try {
+        setFetching(true);
+
         const res = await axios.get(`/api/matches/details/?matchId=${matchId}`);
+
         setMatch(res.data.match);
         setPlayers(res.data.match.joinedPlayers || []);
       } catch (err) {
-        console.error("Error fetching match data:", err);
+        console.error("Fetch error:", err);
+        showToast("error", "Failed to load match data");
+      } finally {
+        setFetching(false);
       }
     };
+
     fetchData();
   }, [matchId]);
 
+  // ✅ Input handler with strict validation
   const handleInputChange = (index, field, value) => {
+    let val = Number(value);
+
+    if (val < 0) val = 0;
+
     const updated = [...players];
-    updated[index][field] = value;
+    updated[index][field] = val;
+
+    const newTotal = updated.reduce(
+      (sum, p) => sum + (Number(p.wining) || 0),
+      0,
+    );
+
+    if (match?.winPrize && newTotal > match.winPrize) {
+      showToast("error", "Total winning exceeds prize limit!");
+
+      // revert change
+      updated[index][field] = players[index][field] || 0;
+
+      setInputError(true);
+    } else {
+      setInputError(false);
+    }
+
     setPlayers(updated);
   };
 
   const handleSave = async () => {
     try {
       setLoading(true);
+
+      if (totalWinning > match.winPrize) {
+        showToast("error", "Winning exceeds total prize!");
+        return;
+      }
 
       const results = players.map((player) => ({
         playerId: player.authId,
@@ -54,16 +97,26 @@ export default function MatchDetails() {
         showToast("success", "Results saved successfully!");
         router.back();
       } else {
-        showToast("error", "Failed to save results");
+        showToast("error", res.data.message || "Failed to save results");
       }
     } catch (err) {
-      console.error("Error saving results:", err);
-      showToast("error", "Something went wrong!");
+      console.error("Save error:", err);
+      showToast("error", "Server error! Try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  // ✅ Loading state
+  if (fetching) {
+    return (
+      <div className="flex justify-center items-center min-h-screen text-white">
+        Loading match...
+      </div>
+    );
+  }
+
+  // ✅ Not found state
   if (!match) {
     return (
       <div className="flex justify-center items-center min-h-screen text-white">
@@ -77,48 +130,59 @@ export default function MatchDetails() {
       <div className="mb-4">
         <h2 className="text-lg font-semibold">Details Page</h2>
         <p className="text-xl font-bold mt-2">{match.matchTitle}</p>
+        <p className="text-sm text-gray-400 mt-1">
+          Prize Pool: {match.winPrize}
+        </p>
       </div>
 
       {/* Players List */}
       <div className="mt-8 border-t border-gray-700 pt-4">
         <h3 className="font-bold text-lg mb-3 text-center">Joined Players</h3>
 
+        {inputError && (
+          <p className="text-sm text-red-500 mb-4 text-center">
+            Total winning exceeds prize limit!
+          </p>
+        )}
+
         {players.length > 0 ? (
           <div className="max-h-64 overflow-y-auto bg-gray-900 rounded-lg border border-gray-700">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-800 text-gray-300">
-                  <th className="py-2 px-4 text-left">#</th>
-                  <th className="py-2 px-4 text-left w-1/3">Player Name</th>
-                  <th className="py-2 px-4 text-left">User Name</th>
-                  <th className="py-2 px-4 text-left">Result</th>
+                  <th className="py-2 px-4">#</th>
+                  <th className="py-2 px-4">Player</th>
+                  <th className="py-2 px-4">Username</th>
+                  <th className="py-2 px-4">Result</th>
                 </tr>
               </thead>
               <tbody>
                 {players.map((player, index) => (
-                  <tr key={player._id} className="border-b border-gray-800">
-                    <td className="py-2 px-4 w-1/12">{index + 1}</td>
-                    <td className="py-2 px-4 w-1/4">{player.name}</td>
-                    <td className="py-2 px-4 w-1/5">{player.userName}</td>
-                    <td className="py-2 px-4 w-1/3 flex gap-3">
+                  <tr key={player._id}>
+                    <td className="py-2 px-4">{index + 1}</td>
+                    <td className="py-2 px-4">{player.name}</td>
+                    <td className="py-2 px-4">{player.userName}</td>
+                    <td className="py-2 px-4 flex gap-3">
                       <input
                         type="number"
+                        min="0"
                         placeholder="Kill"
                         value={player.kills || ""}
                         onChange={(e) =>
                           handleInputChange(index, "kills", e.target.value)
                         }
-                        className="border border-blue-600 bg-transparent py-1 px-2 w-28 rounded outline-none"
+                        className="border border-blue-600 bg-transparent px-2 w-24 rounded"
                       />
 
                       <input
                         type="number"
-                        value={player.wining || ""}
+                        min="0"
                         placeholder="Win"
+                        value={player.wining || ""}
                         onChange={(e) =>
                           handleInputChange(index, "wining", e.target.value)
                         }
-                        className="border border-blue-600 bg-transparent py-1 px-2 w-28 rounded outline-none"
+                        className="border border-blue-600 bg-transparent px-2 w-24 rounded"
                       />
                     </td>
                   </tr>
@@ -130,45 +194,57 @@ export default function MatchDetails() {
           <p className="text-center text-gray-400">No players joined yet.</p>
         )}
 
+        {/* Total */}
+        <p className="text-right mt-2 text-sm text-gray-400">
+          Total Winning: {totalWinning}
+        </p>
+
         {players.length > 0 && (
           <div className="mt-4">
             <ButtonLoading
-              className="w-full bg-blue-600 hover:bg-blue-700"
+              className={`w-full ${
+                inputError
+                  ? "bg-gray-500 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
               text="Save Results"
-              onclick={() => setShowModal(true)} // ✅ open modal
+              onclick={() => {
+                if (!inputError) setShowModal(true);
+              }}
               loading={loading}
             />
           </div>
         )}
       </div>
 
-      {/* ✅ Confirmation Modal */}
+      {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/60 z-50">
-          <div className="bg-gray-900 rounded-2xl p-6 w-[90%] max-w-md shadow-xl border border-gray-700">
-            <h2 className="text-xl font-bold text-white mb-3">
-              Confirm Submission
-            </h2>
+          <div className="bg-gray-900 rounded-2xl p-6 w-[90%] max-w-md">
+            <h2 className="text-xl font-bold mb-3">Confirm Submission</h2>
 
-            <p className="text-gray-300 mb-6">
-              Are you sure you want to save the match results? This action
-              cannot be undone.
-            </p>
+            <p className="text-gray-300 mb-6">This action cannot be undone.</p>
 
-            <div className="flex justify-between gap-3">
+            <div className="flex gap-3">
               <button
                 onClick={() => setShowModal(false)}
-                className="w-full px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600"
+                className="w-full bg-gray-700 py-2 rounded"
               >
                 Cancel
               </button>
 
               <button
                 onClick={async () => {
+                  if (inputError) return;
                   setShowModal(false);
                   await handleSave();
                 }}
-                className="w-full px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700"
+                disabled={inputError}
+                className={`w-full py-2 rounded ${
+                  inputError
+                    ? "bg-gray-500 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
               >
                 Confirm
               </button>

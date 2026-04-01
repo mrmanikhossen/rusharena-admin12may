@@ -19,13 +19,19 @@ export async function POST(req) {
     const match = await Matches.findById(matchId);
     if (!match) return response(false, 404, "Match not found");
 
+    //  here also check if {match.winPrize} is greater than total wining in results
+    const totalWinning = results.reduce((sum, r) => sum + (r.wining || 0), 0);
+
+    if (totalWinning > match.winPrize) {
+      return response(false, 400, "Total winnings exceed match prize pool");
+    }
     const notFoundPlayers = [];
     const updatedPlayers = [];
 
     // 2. Loop through results
     for (const result of results) {
       const joinedPlayer = match.joinedPlayers.find(
-        (p) => p.authId === result.playerId
+        (p) => p.authId === result.playerId,
       );
 
       if (!joinedPlayer) {
