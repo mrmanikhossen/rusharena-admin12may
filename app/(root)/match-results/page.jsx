@@ -77,6 +77,7 @@ export default function ResultPage() {
   const [error, setError] = useState(null);
   const [openMatchId, setOpenMatchId] = useState(null); // ✅ per match toggle
   const [activeTab, setActiveTab] = useState(0);
+  const [modal, setModal] = useState(null);
   const scrollRef = useRef(null);
 
   const formatDate = (date) => {
@@ -129,7 +130,7 @@ export default function ResultPage() {
   };
 
   useEffect(() => {
-    fetchMatches();
+    fetchMatches(MatchType1);
   }, []);
 
   useEffect(() => {
@@ -144,6 +145,76 @@ export default function ResultPage() {
     }
   }, [activeTab]);
 
+ const deleteMatch = async (id) => {
+  setLoading(true);
+  setError(null);
+
+  try {
+    const { value } = await Preferences.get({ key: "access_token" });
+
+    if (!value) {
+      setLoading(false);
+      showToast("error", "Please login to continue!");
+      return;
+    }
+
+    const res = await axios.delete(
+      `/api/matchResults/deleteMatch?matchId=${id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${value}`,
+        },
+      }
+    );
+    if (!res.data.success) {
+      showToast("error", res.data.message || "Failed to delete match");
+      return;
+    }
+
+  await fetchMatches( tabs[activeTab])
+    showToast("success", "Match deleted successfully!");
+  } catch (err) {
+    setError(err.message || "Something went wrong!");
+  } finally {
+    setLoading(false);
+  }
+};
+
+const deleteAll = async (type) => {
+  setLoading(true);
+  setError(null);
+
+  try {
+    const { value } = await Preferences.get({ key: "access_token" });
+
+    if (!value) {
+      setLoading(false);
+      showToast("error", "Please login to continue!");
+      return;
+    }
+
+    const res = await axios.delete(
+      `/api/matchResults/deleteAll?matchType=${type}`,
+      {
+        headers: {
+          Authorization: `Bearer ${value}`,
+        },
+      }
+    );
+    if (!res.data.success) {
+      showToast("error", res.data.message || "Failed to delete match");
+      return;
+    }
+
+  await fetchMatches( tabs[activeTab])
+    showToast("success", "Match deleted successfully!");
+  } catch (err) {
+    setError(err.message || "Something went wrong!");
+  } finally {
+    setLoading(false);
+  }
+};
+
   const handleCardclick = async (id) => {
     router.push(`match-results/details?matchId=${id || ""}`);
   };
@@ -152,7 +223,7 @@ export default function ResultPage() {
     <div className="space-y-4 bg-black min-h-screen p-4">
       <div
         ref={scrollRef}
-        className="flex overflow-x-auto space-x-2 mt-4 mb-6 no-scrollbar"
+        className="flex overflow-x-auto scrollbar-none space-x-2 mt-4 mb-6 no-scrollbar"
       >
         {tabs.map((tab, i) => (
           <button
@@ -203,6 +274,15 @@ export default function ResultPage() {
           <h1 className="text-center text-2xl text-white font-bold mb-4">
             Played Matches
           </h1>
+          <div className="flex justify-between font-bold m-3" >
+            <h2 className="text-center text-2xl text-green-400 " > Total Mathes: { matches.length} </h2>
+             <button
+                        onClick={() =>{setModal("deleteAll")}}
+                        className="bg-red-600 p-2 px-4 rounded-lg font-bold text-white"
+                      >
+                        Delete All
+                      </button>
+          </div>
 
           <div className="grid md:grid-cols-2 gap-3">
             {matches.map((match) => {
@@ -272,6 +352,13 @@ export default function ResultPage() {
                       >
                         Update Result
                       </button>
+
+                      <button
+                        onClick={() => { setModal(match._id)}}
+                        className="bg-red-500 p-2 px-4 rounded-lg font-bold text-white"
+                      >
+                        Delete
+                      </button>
                       <button
                         className="bg-gray-700 p-2 px-4 rounded-lg font-bold text-white"
                         onClick={() => toggleMatch(match._id)}
@@ -324,6 +411,36 @@ export default function ResultPage() {
                 </Card>
               );
             })}
+          </div>
+        </div>
+      )}
+
+           {/* Modal */}
+      {modal && (
+        <div className="fixed inset-0 flex items-center justify-center text-white bg-black/60 z-50">
+          <div className="bg-gray-900 rounded-2xl p-6 w-[90%] max-w-md">
+            <h2 className="text-xl font-bold mb-3">Are You Sure To Delete 
+             <strong className="text-red-400"> {modal === "deleteAll" ? `All ${tabs[activeTab]}` : "This"} </strong>  Match ?</h2>
+
+            <p className="text-gray-300 mb-6">This action cannot be undone.</p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setModal(false)}
+                className="w-full bg-gray-700 py-2 rounded"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={async () => { if(modal==="deleteAll"){
+                  deleteAll(tabs[activeTab])
+                }else{deleteMatch(modal) }  setModal(false) 
+                 }}
+                className="w-full py-2 rounded bg-red-700" >
+                Confirm
+              </button>
+            </div>
           </div>
         </div>
       )}

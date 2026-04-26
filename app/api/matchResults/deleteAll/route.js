@@ -8,25 +8,20 @@ export async function DELETE(req) {
     await connectDB();
 
     const { searchParams } = new URL(req.url);
-    const matchId = searchParams.get("matchId");
+    const matchType = searchParams.get("matchType");
 
-    if (!matchId) {
+    if (!matchType) {
       return NextResponse.json(
-        { success: false, message: "matchId is required" },
+        { success: false, message: "matchType is required" },
         { status: 400 }
       );
     }
 
-    if (!mongoose.Types.ObjectId.isValid(matchId)) {
-      return NextResponse.json(
-        { success: false, message: "Invalid matchId format" },
-        { status: 400 }
-      );
-    }
+
     
     
 
-const deleted = await ResultMatches.findByIdAndDelete(matchId);
+const deleted = await ResultMatches.deleteMany({matchType});
 
     if (deleted.deletedCount === 0) {
       return NextResponse.json(

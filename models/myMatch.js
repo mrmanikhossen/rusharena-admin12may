@@ -7,6 +7,11 @@ const MyMatheschema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    matchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ResultMatches",
+      required: true,
+    },
     title: {
       type: String,
       required: true,

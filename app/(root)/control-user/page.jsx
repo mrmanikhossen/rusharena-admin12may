@@ -175,7 +175,11 @@ export default function AdminUserControl() {
       </div>
 
       {loading && <p className="text-center">Searching users...</p>}
-
+      {users.length > 1 && (
+        <div className="w-full text-green-600  text-xl m-4 text-bold">
+          Total Users : {users.length}
+        </div>
+      )}
       {/* USERS */}
       <div className="flex flex-col lg:grid lg:grid-cols-4 justify-centre gap-6">
         {users.map((user) => (

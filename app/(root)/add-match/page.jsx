@@ -39,7 +39,7 @@ export default function TournamentForm() {
       entryType: "Solo",
       map: "Bermuda",
       totalSpots: 48,
-      prizes: [70], // initialize with 1 input
+      prizeDetails: [0], // initialize with 1 input
     },
   });
 
@@ -54,6 +54,8 @@ export default function TournamentForm() {
     data.startTime = new Date(data.startTime);
 
     try {
+      data.prizeDetails = data.prizeDetails <= 0 ? [] : data.prizeDetails;
+
       const res = await axios.post("/api/addMatch", { data });
       if (res?.data?.success) {
         showToast("success", "Added successfully");
@@ -70,16 +72,16 @@ export default function TournamentForm() {
   const addPrizeInput = () => {
     if (prizeInputsCount < 20) {
       setPrizeInputsCount(prizeInputsCount + 1);
-      form.setValue("prizes", [...form.getValues("prizes"), 0]);
+      form.setValue("prizeDetails", [...form.getValues("prizeDetails"), 0]);
     }
   };
 
   const removePrizeInput = (index) => {
     if (prizeInputsCount > 1) {
       setPrizeInputsCount(prizeInputsCount - 1);
-      const prizes = form.getValues("prizes");
-      prizes.splice(index, 1);
-      form.setValue("prizes", prizes);
+      const prizeDetails = form.getValues("prizeDetails");
+      prizeDetails.splice(index, 1);
+      form.setValue("prizeDetails", prizeDetails);
     }
   };
 
@@ -147,7 +149,7 @@ export default function TournamentForm() {
             <FormField
               key={index}
               control={form.control}
-              name={`prizes.${index}`}
+              name={`prizeDetails.${index}`}
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>
@@ -164,7 +166,7 @@ export default function TournamentForm() {
 
                   <div className="flex gap-2 items-center">
                     <FormControl>
-                      <Input {...field} type="number" />
+                      <Input {...field} placeholder="0" type="number" />
                     </FormControl>
 
                     {prizeInputsCount > 1 && (

@@ -87,6 +87,7 @@ export async function POST(req) {
         [
           {
             userId: user._id,
+            matchId: match._id,
             title: match.title,
             time: match.startTime,
             myKills: kills.toString(),
