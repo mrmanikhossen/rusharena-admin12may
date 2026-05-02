@@ -145,75 +145,75 @@ export default function ResultPage() {
     }
   }, [activeTab]);
 
- const deleteMatch = async (id) => {
-  setLoading(true);
-  setError(null);
+  const deleteMatch = async (id) => {
+    setLoading(true);
+    setError(null);
 
-  try {
-    const { value } = await Preferences.get({ key: "access_token" });
+    try {
+      const { value } = await Preferences.get({ key: "access_token" });
 
-    if (!value) {
-      setLoading(false);
-      showToast("error", "Please login to continue!");
-      return;
-    }
-
-    const res = await axios.delete(
-      `/api/matchResults/deleteMatch?matchId=${id}`,
-      {
-        headers: {
-          Authorization: `Bearer ${value}`,
-        },
+      if (!value) {
+        setLoading(false);
+        showToast("error", "Please login to continue!");
+        return;
       }
-    );
-    if (!res.data.success) {
-      showToast("error", res.data.message || "Failed to delete match");
-      return;
-    }
 
-  await fetchMatches( tabs[activeTab])
-    showToast("success", "Match deleted successfully!");
-  } catch (err) {
-    setError(err.message || "Something went wrong!");
-  } finally {
-    setLoading(false);
-  }
-};
-
-const deleteAll = async (type) => {
-  setLoading(true);
-  setError(null);
-
-  try {
-    const { value } = await Preferences.get({ key: "access_token" });
-
-    if (!value) {
-      setLoading(false);
-      showToast("error", "Please login to continue!");
-      return;
-    }
-
-    const res = await axios.delete(
-      `/api/matchResults/deleteAll?matchType=${type}`,
-      {
-        headers: {
-          Authorization: `Bearer ${value}`,
+      const res = await axios.delete(
+        `/api/matchResults/deleteMatch?matchId=${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${value}`,
+          },
         },
+      );
+      if (!res.data.success) {
+        showToast("error", res.data.message || "Failed to delete match");
+        return;
       }
-    );
-    if (!res.data.success) {
-      showToast("error", res.data.message || "Failed to delete match");
-      return;
-    }
 
-  await fetchMatches( tabs[activeTab])
-    showToast("success", "Match deleted successfully!");
-  } catch (err) {
-    setError(err.message || "Something went wrong!");
-  } finally {
-    setLoading(false);
-  }
-};
+      await fetchMatches(tabs[activeTab]);
+      showToast("success", "Match deleted successfully!");
+    } catch (err) {
+      setError(err.message || "Something went wrong!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteAll = async (type) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { value } = await Preferences.get({ key: "access_token" });
+
+      if (!value) {
+        setLoading(false);
+        showToast("error", "Please login to continue!");
+        return;
+      }
+
+      const res = await axios.delete(
+        `/api/matchResults/deleteAll?matchType=${type}`,
+        {
+          headers: {
+            Authorization: `Bearer ${value}`,
+          },
+        },
+      );
+      if (!res.data.success) {
+        showToast("error", res.data.message || "Failed to delete match");
+        return;
+      }
+
+      await fetchMatches(tabs[activeTab]);
+      showToast("success", "Match deleted successfully!");
+    } catch (err) {
+      setError(err.message || "Something went wrong!");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCardclick = async (id) => {
     router.push(`match-results/details?matchId=${id || ""}`);
@@ -274,14 +274,19 @@ const deleteAll = async (type) => {
           <h1 className="text-center text-2xl text-white font-bold mb-4">
             Played Matches
           </h1>
-          <div className="flex justify-between font-bold m-3" >
-            <h2 className="text-center text-2xl text-green-400 " > Total Mathes: { matches.length} </h2>
-             <button
-                        onClick={() =>{setModal("deleteAll")}}
-                        className="bg-red-600 p-2 px-4 rounded-lg font-bold text-white"
-                      >
-                        Delete All
-                      </button>
+          <div className="flex justify-between font-bold m-3">
+            <h2 className="text-center text-2xl text-green-400 ">
+              {" "}
+              Total Mathes: {matches.length}{" "}
+            </h2>
+            <button
+              onClick={() => {
+                setModal("deleteAll");
+              }}
+              className="bg-red-600 p-2 px-4 rounded-lg font-bold text-white"
+            >
+              Delete All
+            </button>
           </div>
 
           <div className="grid md:grid-cols-2 gap-3">
@@ -354,7 +359,9 @@ const deleteAll = async (type) => {
                       </button>
 
                       <button
-                        onClick={() => { setModal(match._id)}}
+                        onClick={() => {
+                          setModal(match._id);
+                        }}
                         className="bg-red-500 p-2 px-4 rounded-lg font-bold text-white"
                       >
                         Delete
@@ -371,7 +378,7 @@ const deleteAll = async (type) => {
 
                     <div
                       className={`transition-all duration-300 overflow-hidden ${
-                        openMatchId === match._id ? "max-h-[500px]" : "max-h-0"
+                        openMatchId === match._id ? "max-h-[5000px]" : "max-h-0"
                       }`}
                     >
                       <div className="overflow-x-auto mt-3">
@@ -415,12 +422,18 @@ const deleteAll = async (type) => {
         </div>
       )}
 
-           {/* Modal */}
+      {/* Modal */}
       {modal && (
         <div className="fixed inset-0 flex items-center justify-center text-white bg-black/60 z-50">
           <div className="bg-gray-900 rounded-2xl p-6 w-[90%] max-w-md">
-            <h2 className="text-xl font-bold mb-3">Are You Sure To Delete 
-             <strong className="text-red-400"> {modal === "deleteAll" ? `All ${tabs[activeTab]}` : "This"} </strong>  Match ?</h2>
+            <h2 className="text-xl font-bold mb-3">
+              Are You Sure To Delete
+              <strong className="text-red-400">
+                {" "}
+                {modal === "deleteAll" ? `All ${tabs[activeTab]}` : "This"}{" "}
+              </strong>{" "}
+              Match ?
+            </h2>
 
             <p className="text-gray-300 mb-6">This action cannot be undone.</p>
 
@@ -433,11 +446,16 @@ const deleteAll = async (type) => {
               </button>
 
               <button
-                onClick={async () => { if(modal==="deleteAll"){
-                  deleteAll(tabs[activeTab])
-                }else{deleteMatch(modal) }  setModal(false) 
-                 }}
-                className="w-full py-2 rounded bg-red-700" >
+                onClick={async () => {
+                  if (modal === "deleteAll") {
+                    deleteAll(tabs[activeTab]);
+                  } else {
+                    deleteMatch(modal);
+                  }
+                  setModal(false);
+                }}
+                className="w-full py-2 rounded bg-red-700"
+              >
                 Confirm
               </button>
             </div>
