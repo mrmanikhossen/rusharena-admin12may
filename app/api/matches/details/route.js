@@ -8,7 +8,6 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url);
     const matchId = searchParams.get("matchId");
-    // const matchId = "6909d7c2f05d9d045499fe35";
 
     if (!matchId) {
       return new Response(JSON.stringify({ message: "Match Id is required" }), {
@@ -27,13 +26,13 @@ export async function GET(request) {
 
     // Fetch the match by ID and populate joined players
     const match = await Matches.findById(matchId)
-      .populate("joinedPlayers.authId", "name") // assuming your model has joinedPlayers with authId ref: "User"
+      .populate("joinedPlayers.authId", "name")
       .lean();
 
     if (!match) {
       return new Response(
         JSON.stringify({ message: "No match found", data: null }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
+        { status: 404, headers: { "Content-Type": "application/json" } },
       );
     }
 
@@ -48,7 +47,7 @@ export async function GET(request) {
         message: "Failed to fetch match",
         error: error.message,
       }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      { status: 500, headers: { "Content-Type": "application/json" } },
     );
   }
 }

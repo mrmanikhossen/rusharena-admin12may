@@ -8,6 +8,7 @@ const JoinedPlayerSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  userName: { type: String, required: true, trim: true },
 });
 
 const MatchesSchema = new mongoose.Schema(
@@ -27,7 +28,7 @@ const MatchesSchema = new mongoose.Schema(
     startTime: { type: Date, required: true },
     joinedPlayers: { type: [JoinedPlayerSchema], default: [] },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 MatchesSchema.plugin(AutoIncrement, { inc_field: "serialNumber" });

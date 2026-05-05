@@ -34,7 +34,7 @@ export async function POST(req) {
 
     // ✅ Prevent duplicate results
     const existingResult = await ResultMatches.findOne({
-      serialNumber: match.serialNumber,
+      myMatchId: match._id,
     }).session(session);
 
     if (existingResult) {
@@ -44,7 +44,10 @@ export async function POST(req) {
     }
 
     // ✅ Validate prize pool
-    const totalWinning = results.reduce((sum, r) => sum + (r.winning || 0), 0);
+    const totalWinning = results.reduce(
+      (sum, r) => sum + Number(r.winning || 0),
+      0,
+    );
 
     if (totalWinning > match.winPrize) {
       await session.abortTransaction();
@@ -69,6 +72,8 @@ export async function POST(req) {
         continue;
       }
 
+      console.log(finalResults);
+
       const user = await User.findById(playerId).session(session);
 
       if (!user) {
@@ -76,8 +81,10 @@ export async function POST(req) {
         continue;
       }
 
+      const numericWinning = Number(winning);
+
       // ✅ Update balance
-      user.winbalance = (user.winbalance || 0) + winning;
+      user.winbalance = (user.winbalance || 0) + numericWinning;
       await user.save({ session });
 
       updatedPlayers.push(user._id);
@@ -91,7 +98,7 @@ export async function POST(req) {
             title: match.title,
             time: match.startTime,
             myKills: kills.toString(),
-            myWin: winning.toString(),
+            myWin: numericWinning.toString(),
           },
         ],
         { session },
@@ -103,13 +110,14 @@ export async function POST(req) {
         authId: joinedPlayer.authId,
         userName: joinedPlayer.userName,
         kills,
-        winning,
+        winning: numericWinning,
       });
     }
-    // ✅ Sort players by winning (highest first)
+
+    // // ✅ Sort players by winning (highest first)
     finalResults.sort((a, b) => b.winning - a.winning);
 
-    // ✅ Create ResultMatches (single doc)
+    // ✅ Save results
     await ResultMatches.create(
       [
         {
@@ -131,11 +139,11 @@ export async function POST(req) {
     //delete match from Matches collection
     await Matches.findByIdAndDelete(matchId);
 
-    // ✅ Mark match completed
+    // ✅ Mark match completed (NO delete)
     match.status = "completed";
     await match.save({ session });
 
-    // ✅ Commit everything
+    // ✅ Commit transaction
     await session.commitTransaction();
     session.endSession();
 
@@ -144,7 +152,6 @@ export async function POST(req) {
       notFoundPlayers,
     });
   } catch (error) {
-    // ❌ Rollback everything if ANY error happens
     await session.abortTransaction();
     session.endSession();
 
