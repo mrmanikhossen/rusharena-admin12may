@@ -101,7 +101,7 @@ export async function POST(req) {
       finalResults.push({
         name: joinedPlayer.name,
         authId: joinedPlayer.authId,
-        userName: joinedPlayer.name,
+        userName: joinedPlayer.userName,
         kills,
         winning,
       });

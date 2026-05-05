@@ -33,15 +33,38 @@ export default function AdminUserControl() {
     try {
       setLoading(true);
       const res = await axios.get(`/api/users?search=${searchTerm}`);
-
-      if (res.data.success) {
-        setUsers(res.data.data || []);
-      } else {
+      if (!res.data.success) {
+        showToast("error", res.data.message || "Failed to fetch users");
         setUsers([]);
-        showToast("error", res.data.message);
+        return;
       }
-    } catch {
-      showToast("error", "Failed to fetch users");
+      if (res.data.success) {
+        setUsers(res?.data?.data || []);
+      }
+    } catch (err) {
+      showToast("error", err.message || "Failed to fetch users");
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const bannedUsers = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`/api/users/banned-user`);
+
+      if (!res.data.success) {
+        showToast("error", res.data.message || "Failed to fetch users");
+        setUsers([]);
+        return;
+      }
+      if (res.data.success) {
+        setUsers(res?.data?.data || []);
+      }
+    } catch (err) {
+      showToast("error", err.message || "Failed to fetch users");
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -106,10 +129,12 @@ export default function AdminUserControl() {
         userId: banUserId,
         email,
       });
-
+      if (!res.data.success) {
+        showToast("error", res.data.message || "Failed to ban user");
+        return;
+      }
       if (res.data.success) {
         showToast("success", "User banned");
-        setUsers((prev) => prev.filter((u) => u._id !== banUserId));
       }
     } catch {
       showToast("error", "Failed to ban user");
@@ -142,18 +167,27 @@ export default function AdminUserControl() {
   return (
     <div className="p-8 w-full min-h-screen bg-[#0f0f0f] text-gray-200">
       {/* HEADER */}
-      <div className="flex justify-between mb-8">
-        <h1 className="text-2xl font-semibold">Admin User Control</h1>
-
-        <button
-          onClick={() => {
-            setSearchTerm("allUser");
-            setAllusrModal(true);
-          }}
-          className="px-6 py-2 bg-green-700 rounded-lg font-medium"
-        >
-          All Users
-        </button>
+      <div className="mb-8">
+        <h1 className="text-2xl font-semibold mb-4">Admin User Control</h1>
+        <div className="flex justify-between mb-8">
+          <button
+            onClick={() => {
+              bannedUsers();
+            }}
+            className="px-6 py-2 bg-red-700 rounded-lg font-medium"
+          >
+            Banned Users
+          </button>
+          <button
+            onClick={() => {
+              setSearchTerm("allUser");
+              setAllusrModal(true);
+            }}
+            className="px-6 py-2 bg-green-700 rounded-lg font-medium"
+          >
+            All Users
+          </button>
+        </div>
       </div>
 
       {/* SEARCH */}

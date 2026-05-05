@@ -6,13 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
 import Countdown from "@/app/component/countdown";
 import { useRouter } from "next/navigation";
-import {
-  MatchType1,
-  MatchType2,
-  MatchType3,
-  MatchType4,
-  MatchType5,
-} from "@/config";
 
 import {
   Form,
@@ -30,21 +23,53 @@ import axios from "axios";
 
 import RoomPopup from "./roomDetalpopup";
 import PrizePopup from "./prizePopup";
-import { no } from "zod/v4/locales";
+
+import {
+  MatchType1,
+  MatchType2,
+  MatchType3,
+  MatchType4,
+  MatchType5,
+  MatchType6,
+  MatchType7,
+  MatchType8,
+  MatchType9,
+  MatchType10,
+  MatchType1Img,
+  MatchType2Img,
+  MatchType3Img,
+  MatchType4Img,
+  MatchType5Img,
+  MatchType6Img,
+  MatchType7Img,
+  MatchType8Img,
+  MatchType9Img,
+  MatchType10Img,
+} from "@/config";
 
 // ✅ helper to get image based on type
 const getMatchImage = (matchType) => {
   switch (matchType) {
     case MatchType1:
-      return "https://res.cloudinary.com/dnvlk6ubg/image/upload/v1761068487/br-match_itpoat.jpg";
+      return MatchType1Img;
     case MatchType2:
-      return "https://res.cloudinary.com/dnvlk6ubg/image/upload/v1761068488/clash-squad_u3dkmq.jpg";
+      return MatchType2Img;
     case MatchType3:
-      return "https://res.cloudinary.com/dnvlk6ubg/image/upload/v1761068488/lone-wolf_wombhk.jpg";
+      return MatchType3Img;
     case MatchType4:
-      return "https://res.cloudinary.com/dnvlk6ubg/image/upload/v1761874882/download_vmg5ko.jpg";
+      return MatchType4Img;
     case MatchType5:
-      return "https://res.cloudinary.com/dnvlk6ubg/image/upload/v1761068488/squad-brRank_etzfrb.jpg";
+      return MatchType5Img;
+    case MatchType6:
+      return MatchType6Img;
+    case MatchType7:
+      return MatchType7Img;
+    case MatchType8:
+      return MatchType8Img;
+    case MatchType9:
+      return MatchType9Img;
+    case MatchType10:
+      return MatchType10Img;
     default:
       return "/images/logo.jpg";
   }
@@ -61,8 +86,13 @@ const PlayMatch = ({ type }) => {
   const [popupData, setPopupData] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null); // ✅ holds match id to delete
 
+  const defaultValues = {
+    roomId: "",
+    roomPass: "",
+    notification: "",
+  };
   const form = useForm({
-    defaultValues: { roomId: "", roomPass: "", notification: "" },
+    defaultValues,
   });
 
   const formatDate = (date) =>
@@ -283,11 +313,13 @@ const PlayMatch = ({ type }) => {
                 <Button
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (!hasRoomId) {
-                      setRoomIdFor(match._id);
-                    } else {
-                      showToast("success", "Room Id already saved");
-                    }
+
+                    form.reset({
+                      roomId: match.roomId || "",
+                      roomPass: match.roomPass || "",
+                      notification: "",
+                    });
+                    setRoomIdFor(match._id);
                   }}
                   className={`w-1/3 ${
                     hasRoomId
@@ -413,13 +445,25 @@ const PlayMatch = ({ type }) => {
                   </FormItem>
                 )}
               />
+              <div className="flex justify-between w-full gap-4">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setRoomIdFor(null);
+                    form.reset();
+                  }}
+                  className="px-12 py-2 bg-gray-500 hover:bg-gray-400 text-white rounded"
+                >
+                  Cancel
+                </Button>
 
-              <ButtonLoading
-                type="submit"
-                className="w-full mt-4"
-                text="Save"
-                loading={loading}
-              />
+                <ButtonLoading
+                  type="submit"
+                  className="px-12 py-2 text-white rounded"
+                  text="Save"
+                  loading={loading}
+                />
+              </div>
             </form>
           </Form>
         </div>
