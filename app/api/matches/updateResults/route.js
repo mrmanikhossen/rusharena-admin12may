@@ -115,7 +115,7 @@ export async function POST(req) {
     }
 
     // // ✅ Sort players by winning (highest first)
-    finalResults.sort((a, b) => b.winning - a.winning);
+    await finalResults.sort((a, b) => b.winning - a.winning);
 
     // ✅ Save results
     await ResultMatches.create(
