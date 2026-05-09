@@ -107,6 +107,17 @@ export default function MatchDetails() {
     }
   };
 
+  const handleUserSearch = (query) => {
+    if (!query) {
+      setPlayers(match.joinedPlayers || []);
+      return;
+    }
+    const filtered = (match.joinedPlayers || []).filter((p) =>
+      p.name.toLowerCase().includes(query.toLowerCase()),
+    );
+    setPlayers(filtered);
+  };
+
   // ✅ Loading state
   if (fetching) {
     return (
@@ -146,17 +157,23 @@ export default function MatchDetails() {
       <div className="mt-8 border-t border-gray-700 pt-4">
         <h3 className="font-bold text-lg mb-3 text-center">Joined Players</h3>
 
-        {/* Total */}
-        <p className="text-right mt-2 text-sm text-gray-400">
-          Total Winning: {totalWinning}
-        </p>
-
         {inputError && (
           <p className="text-sm text-red-500 mb-4 text-center">
             Total winning exceeds prize limit!
           </p>
         )}
-
+        <div className="p-2 flex justify-between gap-3 w-full text-gray-300 text-sm font-semibold rounded-tl-lg rounded-tr-lg">
+          <input
+            onChange={(e) => handleUserSearch(e.target.value)}
+            type="text"
+            placeholder="Search by username"
+            className=" bg-transparent border border-gray-600 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {/* Total */}
+          <p className="text-right mt-2 text-sm text-gray-400">
+            Total Winning: {totalWinning}
+          </p>
+        </div>
         {players.length > 0 ? (
           <div className="max-h-screen overflow-y-auto bg-gray-900 rounded-lg border border-gray-700">
             <table className="w-full text-sm">
