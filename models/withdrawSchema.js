@@ -12,7 +12,7 @@ const WithdrawSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      enum: ["Bkash", "Nagad", "bonas"],
+      enum: ["Bkash", "Nagad", "Rocket"],
     },
 
     phone: {
@@ -25,7 +25,7 @@ const WithdrawSchema = new mongoose.Schema(
       required: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export default mongoose.models.Withdraws ||

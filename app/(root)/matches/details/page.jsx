@@ -17,6 +17,7 @@ export default function MatchDetails() {
   const [fetching, setFetching] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [inputError, setInputError] = useState(false);
+  const [removePlayer, setRemovePlayer] = useState({});
 
   // ✅ total winning calculation
   const totalWinning = useMemo(() => {
@@ -118,6 +119,27 @@ export default function MatchDetails() {
     setPlayers(filtered);
   };
 
+  const removeSinglePlayer = async (playerId) => {
+    try {
+      setLoading(true);
+      const res = await axios.post(`/api/matches/removePlayer`, {
+        matchId,
+        playerId,
+      });
+      if (res?.data?.success) {
+        showToast("success", "Player removed successfully");
+        setPlayers(players.filter((p) => p._id !== playerId)); // Optimistically update UI
+      } else {
+        showToast("error", "Failed to remove player");
+      }
+    } catch (err) {
+      console.error("Remove player error:", err);
+      showToast("error", "Failed to remove player");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ✅ Loading state
   if (fetching) {
     return (
@@ -189,7 +211,17 @@ export default function MatchDetails() {
                 {players.map((player, index) => (
                   <tr key={player._id} className="border-t border-gray-700 ">
                     <td className="p-2">{index + 1}</td>
-                    <td className="p-2">{player.name}</td>
+                    <td
+                      className="p-2"
+                      onClick={() =>
+                        setRemovePlayer({
+                          playerId: player._id,
+                          name: player.name,
+                        })
+                      }
+                    >
+                      {player.name}
+                    </td>
                     <td className="p-2">{player.userName}</td>
                     <td className="p-2 w-1/3 flex gap-3">
                       <input
@@ -242,6 +274,41 @@ export default function MatchDetails() {
       </div>
 
       {/* Modal */}
+      {removePlayer.playerId && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 z-50">
+          <div className="bg-gray-900 rounded-2xl p-6 w-[90%] max-w-md">
+            <h2 className="text-xl font-bold mb-3">Confirm Submission</h2>
+
+            <p className="text-gray-300 mb-6">
+              Delete{" "}
+              <strong className="p-2 text-green-600 bg-gray-800 rounded font-bold ">
+                {" "}
+                {removePlayer.name}
+              </strong>{" "}
+              from this match.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setRemovePlayer({})}
+                className="w-full bg-gray-700 py-2 rounded"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={async () => {
+                  await removeSinglePlayer(removePlayer.playerId);
+                  setRemovePlayer({});
+                }}
+                className={`w-full py-2 rounded   bg-red-700    `}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/60 z-50">
           <div className="bg-gray-900 rounded-2xl p-6 w-[90%] max-w-md">

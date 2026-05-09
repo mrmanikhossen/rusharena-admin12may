@@ -12,7 +12,7 @@ const DipositSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      enum: ["Bkash", "Nagad", "bonas"],
+      enum: ["Bkash", "Nagad", "Rocket"],
     },
     trxId: {
       type: String,
@@ -25,7 +25,7 @@ const DipositSchema = new mongoose.Schema(
       trim: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export default mongoose.models.Diposits ||
