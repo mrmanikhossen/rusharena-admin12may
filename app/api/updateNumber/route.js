@@ -23,7 +23,7 @@ export async function POST(req) {
       updatedNumber = await NumberModel.findOneAndUpdate(
         { method: type },
         { number },
-        { new: true }
+        { new: true },
       );
     } else {
       // Create new record
@@ -48,12 +48,13 @@ export async function GET() {
     await connectDB();
 
     // Fetch both numbers in parallel
-    const [bkashData, nagadData] = await Promise.all([
+    const [bkashData, nagadData, rocketData] = await Promise.all([
       NumberModel.findOne({ method: "Bkash" }),
       NumberModel.findOne({ method: "Nagad" }),
+      NumberModel.findOne({ method: "Rocket" }),
     ]);
 
-    if (!bkashData && !nagadData) {
+    if (!bkashData && !nagadData && !rocketData) {
       return response(false, 404, "Numbers not found");
     }
 
@@ -62,6 +63,7 @@ export async function GET() {
       data: {
         Bkash: bkashData?.number || null,
         Nagad: nagadData?.number || null,
+        Rocket: rocketData?.number || null,
       },
       message: "Numbers fetched successfully",
     });
