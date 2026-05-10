@@ -14,14 +14,9 @@ export default function UpdateNumberPage() {
   const [numbers, setNumbers] = useState({ Bkash: "", Nagad: "", Rocket: "" });
 
   // Schema for admin number update
-  const regexMap = {
-    Bkash: /^01[3-9]\d{8}$/,
-    Nagad: /^01[3-9]\d{8}$/,
-    Rocket: /^01[3-9]\d{9}$/,
-  };
 
   const schema = z.object({
-    number: z.string().regex(regexMap[method], "Invalid phone number!"),
+    number: z.string().regex(/^01[3-9]\d{8}$/, "Invalid phone number!"),
   });
   const {
     register,
