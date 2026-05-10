@@ -192,7 +192,7 @@ export default function MatchDetails() {
                     <td className="p-2">{index + 1}</td>
                     <td className="p-2">{player.name}</td>
                     <td className="p-2">{player.userName}</td>
-                    <td className="p-2 p-2 w-1/3 flex gap-3">
+                    <td className="p-2  w-1/3 flex gap-3">
                       <input
                         type="number"
                         min="0"

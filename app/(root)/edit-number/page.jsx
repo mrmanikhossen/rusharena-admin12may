@@ -8,16 +8,21 @@ import axios from "axios";
 import { showToast } from "@/app/component/application/tostify";
 import ButtonLoading from "@/app/component/buttonLoading";
 
-// Schema for admin number update
-const schema = z.object({
-  number: z.string().regex(/^01[3-9]\d{8}$/, "Invalid phone number!"),
-});
-
 export default function UpdateNumberPage() {
   const [method, setMethod] = useState("Bkash");
   const [loading, setLoading] = useState(false);
-  const [numbers, setNumbers] = useState({ Bkash: "", Nagad: "" });
+  const [numbers, setNumbers] = useState({ Bkash: "", Nagad: "", Rocket: "" });
 
+  // Schema for admin number update
+  const regexMap = {
+    Bkash: /^01[3-9]\d{8}$/,
+    Nagad: /^01[3-9]\d{8}$/,
+    Rocket: /^01[3-9]\d{9}$/,
+  };
+
+  const schema = z.object({
+    number: z.string().regex(regexMap[method], "Invalid phone number!"),
+  });
   const {
     register,
     handleSubmit,
@@ -35,10 +40,11 @@ export default function UpdateNumberPage() {
         const { data } = await axios.get(`/api/updateNumber`);
         if (data.success) {
           setNumbers({
-            Bkash: data.data.Bkash,
-            Nagad: data.data.Nagad,
+            Bkash: data?.data?.Bkash,
+            Nagad: data?.data?.Nagad,
+            Rocket: data?.data?.Rocket,
           });
-          reset({ number: data.data.Bkash });
+          reset({ number: data?.data?.Bkash });
         }
       } catch {
         showToast("error", "Failed to fetch numbers");
@@ -77,6 +83,7 @@ export default function UpdateNumberPage() {
   const paymentOptions = [
     { name: "Bkash", img: "/images/assets/bkash.jpg" },
     { name: "Nagad", img: "/images/assets/nagad.jpg" },
+    { name: "Rocket", img: "/images/assets/rocket.jpg" },
   ];
 
   return (
