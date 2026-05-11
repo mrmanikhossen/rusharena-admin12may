@@ -15,8 +15,9 @@ export default function MatchDetails() {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [modalMode, setModalMode] = useState(null);
   const [inputError, setInputError] = useState(false);
+  const [editPlayer, setEditPlayer] = useState(null);
 
   // ✅ total winning calculation
   const totalWinning = useMemo(() => {
@@ -75,39 +76,54 @@ export default function MatchDetails() {
     setPlayers(updated);
   };
 
-  const handleSave = async () => {
+  const editSinglePlayer = async (playerId) => {
     try {
-      setLoading(true);
-
       if (totalWinning > match.winPrize) {
         showToast("error", "Winning exceeds total prize!");
         return;
       }
 
-      const results = players.map((player) => ({
-        playerId: player.authId,
-        kills: Number(player.kills) || 0,
-        winning: Number(player.winning) || 0,
-      }));
-
-      const res = await axios.post(`/api/matchResults/updateResults`, {
+      const res = await axios.post(`/api/matchResults/updatePlayer`, {
         matchId,
-        results,
+        playerId,
+        kills: players.find((p) => p._id === playerId)?.kills || 0,
+        winning: players.find((p) => p._id === playerId)?.winning || 0,
       });
 
       if (res?.data?.success) {
         showToast("success", "Results saved successfully!");
-        router.back();
+        // setPlayers(res?.data?.updatedPlayers || players);
       } else {
         showToast("error", res?.data?.message || "Failed to save results");
       }
     } catch (err) {
       console.error("Save error:", err);
       showToast("error", "Server error! Try again.");
-    } finally {
-      setLoading(false);
     }
   };
+
+  const deleteSinglePlayer = async (playerId) => {
+    try {
+      const res = await axios.delete("/api/matchResults/updatePlayer", {
+        data: {
+          matchId,
+          playerId,
+        },
+      });
+
+      if (res?.data?.success) {
+        showToast("success", "Player removed successfully!");
+
+        setPlayers((prev) => prev.filter((p) => p._id !== playerId));
+      } else {
+        showToast("error", res?.data?.message || "Failed to remove player");
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
+      showToast("error", "Server error! Try again.");
+    }
+  };
+
   const handleUserSearch = (query) => {
     if (!query) {
       setPlayers(match.joinedPlayers || []);
@@ -188,34 +204,83 @@ export default function MatchDetails() {
               </thead>
               <tbody>
                 {players.map((player, index) => (
-                  <tr key={player._id}>
-                    <td className="p-2">{index + 1}</td>
-                    <td className="p-2">{player.name}</td>
-                    <td className="p-2">{player.userName}</td>
-                    <td className="p-2  w-1/3 flex gap-3">
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="Kill"
-                        value={player.kills || ""}
-                        onChange={(e) =>
-                          handleInputChange(index, "kills", e.target.value)
-                        }
-                        className="border border-blue-600 bg-transparent px-2 py-1 w-12 rounded"
-                      />
+                  <React.Fragment key={player._id}>
+                    <tr
+                      onClick={() => setEditPlayer(player._id)}
+                      className={
+                        index % 2 === 0 ? "bg-gray-900" : "bg-gray-800"
+                      }
+                    >
+                      <td className="p-2">{index + 1}</td>
 
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="Win"
-                        value={player.winning || ""}
-                        onChange={(e) =>
-                          handleInputChange(index, "winning", e.target.value)
+                      <td className="p-2">{player.name}</td>
+
+                      <td className="p-2">{player.userName}</td>
+
+                      <td className="p-2 w-1/3 flex gap-3">
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="Kill"
+                          value={player.kills || ""}
+                          onChange={(e) =>
+                            handleInputChange(index, "kills", e.target.value)
+                          }
+                          onFocus={() => setEditPlayer(player._id)}
+                          className="border border-blue-600 bg-transparent px-2 py-1 w-12 rounded"
+                        />
+
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="Win"
+                          value={player.winning || ""}
+                          onChange={(e) =>
+                            handleInputChange(index, "winning", e.target.value)
+                          }
+                          onFocus={() => setEditPlayer(player._id)}
+                          className="border border-blue-600 bg-transparent px-2 py-1 w-12 rounded"
+                        />
+                      </td>
+                    </tr>
+
+                    {editPlayer === player._id && (
+                      <tr
+                        className={
+                          index % 2 === 0 ? "bg-gray-900" : "bg-gray-800"
                         }
-                        className="border border-blue-600 bg-transparent px-2 py-1 w-12 rounded"
-                      />
-                    </td>
-                  </tr>
+                      >
+                        <td colSpan={4} className="p-2">
+                          <div className="flex gap-6 justify-around">
+                            <button
+                              onClick={() => {
+                                (setEditPlayer(player._id),
+                                  setModalMode("delete"));
+                              }}
+                              className={`w-1/3 py-2 rounded bg-red-600 hover:bg-red-700  `}
+                            >
+                              Delete
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                (setEditPlayer(player._id),
+                                  setModalMode("update"));
+                              }}
+                              disabled={inputError}
+                              className={`w-1/3 py-2 rounded ${
+                                inputError
+                                  ? "bg-gray-500 cursor-not-allowed"
+                                  : "bg-blue-400 hover:bg-blue-700"
+                              }`}
+                            >
+                              Update
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
@@ -223,36 +288,40 @@ export default function MatchDetails() {
         ) : (
           <p className="text-center text-gray-400">No players joined yet.</p>
         )}
-
-        {players.length > 0 && (
-          <div className="mt-4">
-            <ButtonLoading
-              className={`w-full ${
-                inputError
-                  ? "bg-gray-500 cursor-not-allowed"
-                  : "bg-blue-600 hover:bg-blue-700"
-              }`}
-              text="Save Results"
-              onclick={() => {
-                if (!inputError) setShowModal(true);
-              }}
-              loading={loading}
-            />
-          </div>
-        )}
       </div>
 
       {/* Modal */}
-      {showModal && (
+      {modalMode && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/60 z-50">
           <div className="bg-gray-900 rounded-2xl p-6 w-[90%] max-w-md">
             <h2 className="text-xl font-bold mb-3">Confirm Submission</h2>
 
-            <p className="text-gray-300 mb-6">This action cannot be undone.</p>
+            {modalMode === "update" && (
+              <p className="text-gray-300 mb-6">
+                Are you sure to update{" "}
+                <span className="bg-gray-700 text-green-400 p-2 rounded">
+                  {" "}
+                  {editPlayer &&
+                    players.find((p) => p._id === editPlayer)?.name}
+                </span>{" "}
+                information ?
+              </p>
+            )}
+            {modalMode === "delete" && (
+              <p className="text-gray-300 mb-6">
+                Are you sure you want to delete{" "}
+                <span className="bg-gray-700 text-green-400 p-2 rounded">
+                  {" "}
+                  {editPlayer &&
+                    players.find((p) => p._id === editPlayer)?.name}
+                </span>{" "}
+                From this Match ?
+              </p>
+            )}
 
             <div className="flex gap-3">
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => setModalMode(null)}
                 className="w-full bg-gray-700 py-2 rounded"
               >
                 Cancel
@@ -261,14 +330,16 @@ export default function MatchDetails() {
               <button
                 onClick={async () => {
                   if (inputError) return;
-                  setShowModal(false);
-                  await handleSave();
+                  setModalMode(null);
+                  setEditPlayer(null);
+                  if (modalMode === "delete") {
+                    await deleteSinglePlayer(editPlayer);
+                  } else if (modalMode === "update") {
+                    await editSinglePlayer(editPlayer);
+                  }
                 }}
-                disabled={inputError}
                 className={`w-full py-2 rounded ${
-                  inputError
-                    ? "bg-gray-500 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700"
+                  modalMode === "delete" ? "bg-red-600" : "bg-blue-600"
                 }`}
               >
                 Confirm

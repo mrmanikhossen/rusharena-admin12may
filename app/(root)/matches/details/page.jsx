@@ -18,6 +18,7 @@ export default function MatchDetails() {
   const [showModal, setShowModal] = useState(false);
   const [inputError, setInputError] = useState(false);
   const [removePlayer, setRemovePlayer] = useState({});
+  const [searching, setSearching] = useState(false);
 
   // ✅ total winning calculation
   const totalWinning = useMemo(() => {
@@ -109,10 +110,13 @@ export default function MatchDetails() {
   };
 
   const handleUserSearch = (query) => {
-    if (!query) {
+    if (!query || query.trim() === "") {
+      setSearching(false);
       setPlayers(match.joinedPlayers || []);
       return;
     }
+    setSearching(true);
+
     const filtered = (match.joinedPlayers || []).filter((p) =>
       p.name.toLowerCase().includes(query.toLowerCase()),
     );
@@ -185,12 +189,14 @@ export default function MatchDetails() {
           </p>
         )}
         <div className="p-2 flex justify-between gap-3 w-full text-gray-300 text-sm font-semibold rounded-tl-lg rounded-tr-lg">
-          <input
-            onChange={(e) => handleUserSearch(e.target.value)}
-            type="text"
-            placeholder="Search by username"
-            className=" bg-transparent border border-gray-600 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          <div className="w-1/2 flex items-center ">
+            <input
+              onChange={(e) => handleUserSearch(e.target.value)}
+              type="text"
+              placeholder="Search by username"
+              className=" bg-transparent border  border-gray-600 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
           {/* Total */}
           <p className="text-right mt-2 text-sm text-gray-400">
             Total Winning: {totalWinning}
@@ -255,7 +261,7 @@ export default function MatchDetails() {
           <p className="text-center text-gray-400">No players joined yet.</p>
         )}
 
-        {players.length > 0 && (
+        {players.length > 0 && !searching && (
           <div className="mt-4">
             <ButtonLoading
               className={`w-full ${

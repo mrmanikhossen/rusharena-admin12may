@@ -9,7 +9,7 @@ export async function GET() {
     await connectDB();
 
     // Fetch all deposits (no populate)
-    const deposits = await Diposits.find().sort({ createdAt: 1 }); // newest first
+    const deposits = await Diposits.find().sort({ createdAt: -1 }); // newest first
 
     return NextResponse.json({
       success: true,

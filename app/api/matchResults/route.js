@@ -17,7 +17,9 @@ export async function GET(request) {
       });
     }
 
-    const matches = await ResultMatches.find({ matchType }).lean();
+    const matches = await ResultMatches.find({ matchType })
+      .sort({ createdAt: -1 })
+      .lean();
     if (!matches) {
       return new Response(
         JSON.stringify({ message: "No  matches found", data: [] }),
