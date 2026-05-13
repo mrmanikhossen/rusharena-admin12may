@@ -5,114 +5,191 @@ import smsLog from "@/models/smsLog";
 import dipositScema from "@/models/dipositScema";
 import { catchError, response } from "@/lib/healperFunc";
 
+/**
+ * ----------------------------
+ * SERVICE PARSERS
+ * ----------------------------
+ */
+const parsers = {
+  bkash: {
+    amount: /received Tk\s*([\d.]+)/i,
+    sender: /from\s*(01[3-9]\d{8})/i,
+    trx: /TrxID\s*([A-Z0-9]+)/i,
+  },
+  nagad: {
+    amount: /Amount:\s*Tk\s*([\d.]+)/i,
+    sender: /Sender:\s*(01[3-9]\d{8})/i,
+    trx: /TxnID:\s*([A-Z0-9]+)/i,
+  },
+  rocket: {
+    amount: /Tk\s*([\d.]+)\s*received/i,
+    sender: /A\/C:\*+\d+/i,
+    trx: /TxnId:\s*([A-Z0-9]+)/i,
+  },
+};
+
+/**
+ * ----------------------------
+ * SAFE EXTRACTION
+ * ----------------------------
+ */
+function extract(text, regex) {
+  const match = text.match(regex);
+  return match ? match[1] : null;
+}
+
+/**
+ * ----------------------------
+ * IMPROVED SERVICE DETECTION (scoring system)
+ * ----------------------------
+ */
+function detectService(text) {
+  if (!text) return null;
+
+  let bkash = 0;
+  let nagad = 0;
+  let rocket = 0;
+
+  // bKash signals
+  if (/you have received tk/i.test(text)) bkash += 2;
+  if (/trxid/i.test(text)) bkash += 2;
+  if (/from\s*01[3-9]\d{8}/i.test(text)) bkash += 2;
+
+  // Nagad signals
+  if (/amount:\s*tk/i.test(text)) nagad += 2;
+  if (/sender:\s*01[3-9]\d{8}/i.test(text)) nagad += 2;
+  if (/txnid/i.test(text)) nagad += 2;
+
+  // Rocket signals
+  if (/a\/c:\*+\d+/i.test(text)) rocket += 2;
+  if (/txn[i]?d/i.test(text)) rocket += 2;
+  if (/fee\s*:?tk/i.test(text)) rocket += 1;
+
+  const max = Math.max(bkash, nagad, rocket);
+
+  // require minimum confidence
+  if (max < 3) return null;
+
+  if (bkash === max) return "bkash";
+  if (nagad === max) return "nagad";
+  if (rocket === max) return "rocket";
+
+  return null;
+}
+
+/**
+ * ----------------------------
+ * PARSE MESSAGE
+ * ----------------------------
+ */
+function parseMessage(text, service) {
+  const rules = parsers[service];
+  if (!rules) return null;
+
+  const amount = parseFloat(extract(text, rules.amount));
+  const senderNumber = extract(text, rules.sender);
+  const trxId = extract(text, rules.trx);
+
+  return {
+    amount: Number.isFinite(amount) ? amount : null,
+    senderNumber,
+    trxId,
+    service,
+  };
+}
+
+/**
+ * ----------------------------
+ * MAIN ROUTE
+ * ----------------------------
+ */
 export async function POST(req) {
   try {
     await connectDB();
 
-    // --- Parse body safely (supports both JSON & form-data)
-
-    let body;
-    try {
-      body = await req.json();
-    } catch {
+    const body = await req.json().catch(async () => {
       const text = await req.text();
-      const params = new URLSearchParams(text);
-      body = Object.fromEntries(params.entries());
+      return Object.fromEntries(new URLSearchParams(text));
+    });
+
+    const key = body?.key;
+
+    // ---------------- VALIDATION ----------------
+    if (typeof key !== "string" || key.trim().length < 10) {
+      return response(false, 400, "Invalid SMS payload");
     }
 
-    const { key, time } = body;
-
-    if (!key || typeof key !== "string") {
-      return response(false, 400, "Invalid or missing 'key'");
+    const service = detectService(key);
+    if (!service) {
+      return response(false, 400, "Could not detect payment service");
     }
 
-    // --- Extract values via regex
-    const amountMatchB = key.match(/received Tk\s*([\d.]+)/i);
-    const fromMatch = key.match(/from\s*(01[3-9]\d{8})/i);
-    const trxIdMatch = key.match(/TrxID\s*([A-Z0-9]+)/i);
+    const data = parseMessage(key, service);
 
-    const amountMatchN = key.match(/Amount: Tk\s*([\d.]+)/i);
-    const senderMatch = key.match(/Sender:\s*(01[3-9]\d{8})/i);
-    const txnIdMatch = key.match(/TxnID:\s*([A-Z0-9]+)/i);
-
-    // ✅ FIXED LOGIC
-    let amount = null;
-    if (amountMatchB) amount = parseFloat(amountMatchB[1]);
-    else if (amountMatchN) amount = parseFloat(amountMatchN[1]);
-
-    let senderNumber = null;
-    if (senderMatch) senderNumber = senderMatch[1];
-    else if (fromMatch) senderNumber = fromMatch[1];
-
-    let trxId = null;
-    if (trxIdMatch) trxId = trxIdMatch[1];
-    else if (txnIdMatch) trxId = txnIdMatch[1];
-
-    const service = senderMatch ? "Nagad" : fromMatch ? "Bkash" : "Unknown";
-
-    // --- Validate extracted data
-    if (!amount || isNaN(amount) || amount <= 0) {
-      return response(false, 400, "Invalid amount");
+    if (!data) {
+      return response(false, 400, "Failed to parse message");
     }
 
-    if (!trxId || trxId.length < 5) {
+    if (!data.amount || data.amount <= 0) {
+      return response(false, 400, "Invalid amount detected");
+    }
+
+    if (!data.trxId || data.trxId.length < 5) {
       return response(false, 400, "Invalid transaction ID");
     }
 
-    const existingTx = await smsLog.findOne({ transactionId: trxId });
-    if (existingTx)
-      return response(false, 409, "Duplicate transaction detected");
+    // ---------------- DUPLICATE CHECK ----------------
+    const existing = await smsLog.exists({ transactionId: data.trxId });
+    if (existing) {
+      return response(false, 409, "Duplicate transaction");
+    }
 
-    // --- Find matching deposit request
-    const deposit = await dipositScema.findOne({ trxId: trxId });
+    const method = service.charAt(0).toUpperCase() + service.slice(1);
 
+    // ---------------- FIND DEPOSIT ----------------
+    const deposit = await dipositScema.findOne({ trxId: data.trxId });
+
+    // ---------------- NO MATCH → LOG ----------------
     if (!deposit) {
-      // Log as pending SMS if no deposit request found
       await smsLog.create({
-        service,
-        senderNumber,
-        amount,
-        transactionId: trxId,
+        service: method,
+        senderNumber: data.senderNumber,
+        amount: data.amount,
+        transactionId: data.trxId,
         receivedAt: new Date(),
       });
 
-      return response(
-        true,
-        200,
-        "No deposit found. Logged SMS for later matching.",
-      );
+      return response(true, 200, "Logged for later matching");
     }
 
-    // --- Create a transaction record
-    const newTx = await Transactions.create({
+    // ---------------- TRANSACTION ----------------
+    await Transactions.create({
       userId: deposit.userId,
       type: "deposit",
-      method: service,
-      phone: senderNumber,
-      id: trxId,
-      amount,
+      method,
+      phone: data.senderNumber,
+      id: data.trxId,
+      amount: data.amount,
       createdAt: new Date(),
     });
 
-    if (!newTx)
-      return response(false, 500, "Failed to create transaction record");
-
-    // --- Update user balance
+    // ---------------- BALANCE UPDATE ----------------
     const updatedUser = await User.findByIdAndUpdate(
       deposit.userId,
-      { $inc: { dipositbalance: amount } },
+      { $inc: { dipositbalance: data.amount } },
       { new: true },
     );
 
-    if (!updatedUser)
-      return response(false, 404, "User not found while updating balance");
+    if (!updatedUser) {
+      return response(false, 404, "User not found");
+    }
 
-    // --- Clean up: delete matched deposit request
+    // ---------------- CLEANUP ----------------
     await deposit.deleteOne();
 
     return response(true, 200, "Deposit successful and balance updated");
   } catch (err) {
-    console.error("❌ Deposit route error:", err);
+    console.error("Deposit route error:", err);
     return catchError(err);
   }
 }
