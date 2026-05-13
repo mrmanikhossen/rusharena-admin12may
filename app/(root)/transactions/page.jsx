@@ -11,7 +11,7 @@ export default function DepositListPage() {
   const [copiedId, setCopiedId] = useState(null);
   const [totalDepositsToday, setTotalDipositsToday] = useState(0);
   const [totalWithdrawToday, setTotalWithdrawToday] = useState(0);
-  const [showModal, setShowModal] = useState(false);
+  const [showModal, setShowModal] = useState(null);
 
   // Fetch all deposit requests
   const fetchTransactions = async (time = "today") => {
@@ -70,7 +70,7 @@ export default function DepositListPage() {
 
   const handleTypeFilter = (type) => {
     if (type !== "today" && type !== "twoDay") {
-      setShowModal(true);
+      setShowModal(type);
       return;
     }
 
@@ -261,7 +261,7 @@ export default function DepositListPage() {
 
             <div className="flex gap-3">
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => setShowModal(null)}
                 className="w-full bg-gray-700 py-2 rounded"
               >
                 Cancel
@@ -269,7 +269,7 @@ export default function DepositListPage() {
 
               <button
                 onClick={async () => {
-                  (setShowModal(false), await fetchTransactions("all"));
+                  (setShowModal(null), await fetchTransactions(showModal));
                 }}
                 className={`w-full py-2 rounded bg-blue-600 hover:bg-blue-700 `}
               >
