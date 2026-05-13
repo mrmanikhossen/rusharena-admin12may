@@ -8,6 +8,7 @@ export const analytic = "/analytic";
 export const edit_number = "/edit-number";
 export const admin_password = "/admin-password";
 export const match_results = "/match-results";
+export const transactions = "/transactions";
 
 // admin routes -------------
 

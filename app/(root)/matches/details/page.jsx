@@ -286,7 +286,7 @@ export default function MatchDetails() {
             <h2 className="text-xl font-bold mb-3">Confirm Submission</h2>
 
             <p className="text-gray-300 mb-6">
-              Delete{" "}
+              Remove and Refund{" "}
               <strong className="p-2 text-green-600 bg-gray-800 rounded font-bold ">
                 {" "}
                 {removePlayer.name}

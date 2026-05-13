@@ -17,6 +17,7 @@ import {
   edit_number,
   admin_password,
   match_results,
+  transactions,
 } from "@/routes/websiteRoute";
 import ButtonLoading from "./buttonLoading";
 import { Preferences } from "@capacitor/preferences";
@@ -30,6 +31,7 @@ import {
   Edit,
   UserPen,
   BarChart3,
+  ListChecks,
   Image as ImageIcon,
 } from "lucide-react";
 
@@ -41,6 +43,7 @@ const menuData = [
   { label: "Control User", link: control_user, icon: FilePlus },
   { label: "Pending Diposits", link: all_deposit, icon: DollarSign },
   { label: "Pending withdraws", link: all_withdraws, icon: ArrowDownCircle },
+  { label: "Transactions", link: transactions, icon: ListChecks },
   { label: "Others", link: analytic, icon: Settings },
   { label: "Edit Numbers", link: edit_number, icon: Edit },
   { label: "Admin Passwords", link: admin_password, icon: UserPen },
